@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh">
+	<head>
+		<meta charset="UTF-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta http-equiv="X-UA-Compatible" content="ie=edge">
+		<!-- jQuery -->
+
+		<!-- vue -->
+		<script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+		
+		<!-- Axios -->
+		<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+		<!-- 引入样式 -->
+		<link rel="stylesheet" href="/static/css/public.css">
+		<!-- element -->
+		<link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+		<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+
+		<!-- less -->
+		<link rel="stylesheet/less" type="text/css" href="/static/css/style.less" />
+		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/3.11.1/less.min.js"></script>
+
+
+		<title></title>
+	</head>
+	<body>
+		<div id="view">
+			<div style="display:flex">
+			    <div>
+			    <p>
+    				姓名：{{userInfo.name}}
+    			</p>
+    			<p>
+    				账号：{{userInfo.account}}
+    			</p>
+    			<p>
+    				手机号码：{{userInfo.mobile}}
+    			</p>
+    			<p v-if="userInfo.invitationCode">
+    				注册码：{{userInfo.invitationCode}}
+    			</p>
+    			<p>
+    				聊天室在线人数：{{count}}
+    			</p>
+			</div>
+			<div style="width:120px;height:120px;border:1px dashed #ccc;position: relative;">
+			    <input @change="changeImg($event)" style="width:100%;height:100%;opacity: 0;position:absolute;top:0;left:0" type="file" accept="image/*" name="" id="" value="" />
+			    <img style="width:100%;height:100%;" :src="userInfo.avatar" alt="" />
+			</div>
+			</div>
+            <el-row>
+        		<el-col :span="5">
+        	    	<el-input @keyup.enter.native="send" v-model="sentence" placeholder="请输入内容"></el-input>
+    			    <el-button type="success" @click="send" plain>发送</el-button>
+			    </el-col>
+			</el-row>
+			<el-row>
+		    	<el-button type="danger" @click="loginOut" plain>退出登录</el-button>
+			</el-row>
+			<div style="display: flex;flex-direction: column;flex-direction: column-reverse;margin-bottom:20px;">
+    			<div v-for="item,index in serveMsee">
+    			    <div id="msgItem">
+    			        
+    			        
+    			       <div style="display:flex;position: relative; flex-direction: row-reverse"  v-if="token == item.token">
+    			        <div class="jiantouyou">
+    			            
+    			        </div>
+    			        <img style="border:5px solid rgb(158,234,106); border-radius: 50%;width: 80px;height: 80px;object-fit: cover;margin-left:15px" :src="item.avatar" alt="" />
+    			        <div>
+    			           <div style="margin-top:15px;max-width:500px;word-break: break-all;border-radius: 10px;background:rgb(158,234,106);padding:15px">
+    			                {{item.message}}
+    			           </div>
+    			        </div>
+    			      </div>
+    			      
+    			      <div style="display:flex;position: relative;" v-else>
+    			          
+    			        <div class="jiantouzuo">
+    			            
+    			        </div>
+    			        <img style="border:5px solid rgb(239 239 239); border-radius: 50%;width: 80px;height: 80px;object-fit: cover;margin-right:15px;margin-top:20px;" :src="item.avatar" alt="" />
+    			        <div>
+    			           <div style="margin-top:15px">
+    			               {{item.name}}:
+    			           </div>
+    			           <div style="margin-top:15px;max-width:500px;word-break: break-all;background:#f3f3f3;border-radius: 10px;padding:15px">
+    			                {{item.message}}
+    			           </div>
+    			        </div>
+    			      </div>
+    			      
+    			    </div>
+    			</div>
+			    
+			</div>
+		</div>
+	</body>
+</html>
+<script type="text/javascript">
+    
+	const vm = new Vue({
+		el: "#view",
+		data() {
+			return {
+			    //临时图片
+			    temporary:"",
+			    
+				userInfo: {},
+				// 在线人数
+				count:0,
+				// 聊天语句
+				serveMsee:[],
+				//输入语句
+				sentence:'',
+				// token
+				token:localStorage.getItem('token'),
+				// 实例的scoket
+				wsUrl:""
+			}
+		},
+		created() {
+		    
+			if (localStorage.getItem('token') == null) {
+
+				location.href = 'login.html'
+
+			} else {
+
+				this.getUserInfo()
+
+			}
+		},
+		methods: {
+		  //  图片转base64
+		    getImageBase64(img, ext) {
+        		var canvas = document.createElement(
+        			"canvas");
+        		canvas.width = img.width;
+        		canvas.height = img.height;
+        		var ctx = canvas.getContext("2d");
+        		ctx.drawImage(img, 0, 0, img.width, img.height);
+        		var dataURL = canvas.toDataURL("image/" + ext);
+        		canvas = null;
+        	},
+		    changeImg(e){
+		      //  console.log(e)
+    		      //console.log(e.path[0].files[0])  
+		        let file = new FormData()
+    			file.append('image',e.path[0].files[0]) 
+    			axios({
+    				url: '/index.php/index/index/upload',
+    				method: 'post',
+    				data: file,
+    				headers: {
+    					 'Content-Type': 'application/x-www-form-urlencoded'
+    				}
+    			}).then(res => {
+    				// console.log(res.data);
+    				// this.userInfo.avatar = res.data
+    				// this.temporary = res.data
+    				
+					axios({
+        				url: '/index.php/index/index/changeAvatar',
+        				method: 'post',
+    					data: {
+    						token: localStorage.getItem('token'),
+    						url:'https://xss.red/DQ4A/p.jpg'
+    					},
+        			}).then(rel => {
+        				console.log(rel);
+        				this.$notify({
+							title: '成功',
+							message: rel.data.msg,
+							type: 'success'
+						});
+        				this.userInfo.avatar = res.data
+        				this.temporary = res.data
+        			});
+    			});
+		    },
+		    send(){
+		        
+		        if(this.sentence == "" || this.sentence.length<=0){
+		            this.$notify.error({
+							title: '错误',
+							message: '消息不能为空'
+						});
+		            
+		            return
+		            
+		        }
+		      //  console.log(ws)
+		      //  this.wsUrl.send(`{type:"message",message:"` + this.sentence + `",name:"`+ this.userInfo.name +`",token:"`+ localStorage.getItem('token') +`",avatar:" `+ this.userInfo.avatar +`"}`)
+		        
+		      //   this.wsUrl.send(`'{"type":"message","message":"` + this.sentence + `","name":"`+ this.userInfo.name +`","token":"`+ localStorage.getItem('token') +`"}'`)
+		      
+		        this.wsUrl.send(JSON.stringify({"type":"message","message":this.sentence,"name":this.userInfo.name,"token": localStorage.getItem('token'),"avatar":this.userInfo.avatar}))
+		        
+		        this.sentence = ""
+		    },
+			loginOut() {
+				localStorage.setItem('token', '')
+				this.getUserInfo()
+			},
+			getUserInfo() {
+				axios({
+					url: '/index.php/index/index/getUserInfo',
+					method: 'post',
+					params: {
+						token: localStorage.getItem('token')
+					},
+				}).then(res => {
+				// 	console.log(res.data);
+					if (res.data.code == 0) {
+					    
+						this.$notify({
+							title: '成功',
+							message: res.data.msg,
+							type: 'success'
+						});
+						
+						this.temporary = res.data.data.avatar
+						
+						this.conntSocket()
+
+						this.userInfo = res.data.data
+					} else {
+						this.$notify.error({
+							title: '错误',
+							message: res.data.msg
+						});
+
+						setTimeout(() => {
+							location.href = './login.html'
+						}, 1000)
+					}
+				});
+			},
+			conntSocket() {
+			    
+		    	var Ws = new WebSocket("ws://101.34.10.199:2345");
+		    	
+		    	this.wsUrl = Ws
+			    
+				Ws.onerror = () => {
+					this.$notify.error({
+						title: '提示',
+						message: '聊天服务器连接失败'
+					});
+				};
+
+				Ws.onopen = () => {
+					this.$notify({
+						title: '提示',
+						message: '聊天服务器连接成功',
+						type: 'success'
+					});
+				};
+
+				Ws.onmessage = function(e) {
+				    // console.log(e)
+					// console.log()
+					var json = (new Function("return " + e.data))();
+				// 	console.log('scoket获取到的数据',json)
+					// console.log(json)
+					// vm.count = json.count
+					if (json.type == 'message') {
+						vm.serveMsee.push(json)
+				// 		console.log('serveMsee', vm.serveMsee)
+					} else {
+						vm.count = json.count
+					}
+				}
+			}
+
+		}
+	})
+</script>
+
+<style type="text/css" media="all">
+#msgItem{
+    margin-bottom: 15px;
+}
+    
+    
+.jiantouzuo{
+    border: 10px solid black;
+    position: absolute;
+    border-color: transparent;
+    border-right-color: #f3f3f3;
+    top: 65px;
+    z-index: 99999;
+    left: 75px;
+}
+
+.jiantouyou{
+    border: 10px solid black;
+    position: absolute;
+    border-color: transparent;
+    border-left-color: rgb(158,234,106);
+    top: 30px;
+    z-index: 99999;
+    right: 75px;
+}
+</style>
